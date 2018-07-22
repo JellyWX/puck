@@ -53,19 +53,9 @@ def main():
 		print("=> Downloading..")
 		print(sys.argv[1])
 		urllib.request.urlretrieve(sys.argv[1], 'wallpaper.png')
-
-	print("=> Extracting primary color..")
-	color_thief = ColorThief('wallpaper.png')
-	# color = color_thief.get_color(quality=1)
-	color = color_thief.get_color(quality=1)
-
-	write_colors(color)
-
-	print("=> Reloading i3")
-	os.system('i3-msg reload >/dev/null 2>&1')
-
+		
 	print("=> Setting wallpaper")
-	os.system("feh --bg-fill wallpaper.png >/dev/null 2>&1")
+	os.system("gsettings set org.gnome.desktop.background picture-uri 'file:///home/jude/puck/wallpaper.png'")
 
 
 def grab_random_picture(subreddit):
@@ -91,75 +81,6 @@ def grab_random_picture(subreddit):
 	print(url)
 
 	return url
-
-
-def darken(percent, color):
-	return tuple([max(min(int(x - percent * 255 / 100), 255), 0) for x in color])
-
-
-def lighten(percent, color):
-	return tuple([max(min(int(x + percent * 255 / 100), 255), 0) for x in color])
-
-
-def write_colors(color):
-	print('=> Writing color to config file..')
-
-	config_path = os.path.expanduser('~/.config/i3/config')
-
-	with open(config_path, 'r') as config:
-		content = config.readlines()
-		start, end, dmenu_index = None, None, None
-
-		for index, line in enumerate(content):
-			if line.strip() == "colors {":
-				start = index + 1
-			elif start and line.strip() == "}":
-				end = index - 1
-			elif line.strip() == '# dmenu':
-				dmenu_index = index + 1
-
-	del content[start:end]
-
-	content.insert(start, '		background #%02x%02x%02x\n' % color)
-
-	# If the image is too bright, switch the text color
-	is_bright = math.sqrt(0.299 * color[0] ** 2 + 0.587 * color[1] ** 2 + 0.114 * color[2] ** 2) > 175
-	print('is_bright?', is_bright)
-
-	if dmenu_index is not None:
-		del content[dmenu_index]
-
-		content.insert(dmenu_index, "bindsym $mod+d exec dmenu_run -i -p \"$(hostname | sed 's/.*/\\u&/')\" -fn 'pixelsize=10' -nb '{}' -nf '#FFFFFF' -sf '#FFFFFF' -sb '{}' -sf '{}'\n".format(
-			'#%02x%02x%02x' % color,
-			'#FFFFFF',
-			'#2b2b2b',
-		))
-
-	if is_bright:
-		content.insert(start, '		statusline #2b2b2b\n')
-		content.insert(start, '		separator #333333\n')
-
-	content.insert(start, '		focused_workspace {} {} {}\n'.format(
-		# Border,
-		'#%02x%02x%02x' % darken(20, color),
-		# Background
-		'#%02x%02x%02x' % darken(20, color),
-		# Font,
-		'#2b2b2b' if is_bright else '#FFFFFF'
-	))
-
-	content.insert(start, '		inactive_workspace {} {} {}\n'.format(
-		# Border,
-		'#%02x%02x%02x' % lighten(5, color),
-		# Background
-		'#%02x%02x%02x' % darken(5, color),
-		# Font,
-		'#2b2b2b' if is_bright else '#FFFFFF'
-	))
-
-	with open(config_path, 'w') as config:
-		config.write(''.join(content))
-
 
 if __name__ == '__main__':
 	main()
